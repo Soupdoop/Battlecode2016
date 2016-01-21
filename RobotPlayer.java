@@ -401,12 +401,14 @@ public class RobotPlayer{
 		public MapLocation coreLocation; //location of archon
 		public MapLocation target; //location of hostile target [zombiedens, enemyarchons]
 		public int moveType; //type of movement: 0==movement around friendly archon, 1==movement towards "stepping stone target", 2==movement towards hostile target
+		public RobotType targetType;
 		public int targetID;
 		public boolean locked = false;
 		
 		public Swarmer(){
 			coreLocation = null;
 			target = null;
+			targetType = null;
 			moveType = 0;
 		}
 		
@@ -449,8 +451,12 @@ public class RobotPlayer{
 							for(int i = 0; i < tryOrder.length && !hasMoved; i++){
 								MapLocation moveTo = current.add(RESOURCE_FUNCTIONS.intToDir(startDir + tryOrder[i]));
 								int distance = moveTo.distanceSquaredTo(coreLocation);
-								if(distance > 2 && distance < (int)(swarmRadius + 1) && rc.canMove(current.directionTo(moveTo))){
-									rc.move(current.directionTo(moveTo));
+								if(rc.onTheMap(moveTo) && !rc.isLocationOccupied(moveTo) && distance > 2 && distance < (int)(swarmRadius + 1)){
+									if(rc.senseRubble(moveTo) > 100){
+										rc.clearRubble(current.directionTo(moveTo));
+									}else{
+										rc.move(current.directionTo(moveTo));
+									}
 									hasMoved = true;
 								}
 								if(rc.canMove(RESOURCE_FUNCTIONS.intToDir(startDir + tryOrder[i]))){
@@ -467,7 +473,7 @@ public class RobotPlayer{
 							if(!locked){
 								RobotInfo[] enemiesInSight = rc.senseHostileRobots(rc.getLocation(),rc.getType().sensorRadiusSquared);
 								for(int i = 0; i < enemiesInSight.length; i++){
-									if(enemiesInSight[i].type == RobotType.ARCHON || enemiesInSight[i].type == RobotType.ZOMBIEDEN){
+									if(enemiesInSight[i].type == RobotType.ARCHON || enemiesInSight[i].type == RobotType.ZOMBIEDEN || enemiesInSight[i].type == RobotType.BIGZOMBIE){
 										target = enemiesInSight[i].location;
 										targetID = enemiesInSight[i].ID;
 										moveType = 2;
@@ -496,9 +502,10 @@ public class RobotPlayer{
 							}
 							RobotInfo[] enemiesInSight = rc.senseHostileRobots(rc.getLocation(),rc.getType().sensorRadiusSquared);
 							for(int i = 0; i < enemiesInSight.length; i++){
-								if(enemiesInSight[i].type == RobotType.ARCHON || enemiesInSight[i].type == RobotType.ZOMBIEDEN){
+								if(enemiesInSight[i].type == RobotType.ARCHON || enemiesInSight[i].type == RobotType.ZOMBIEDEN || enemiesInSight[i].type == RobotType.BIGZOMBIE){
 									target = enemiesInSight[i].location;
 									targetID = enemiesInSight[i].ID;
+									targetType = enemiesInSight[i].type;
 									moveType = 2;
 									rc.broadcastSignal((int)(rc.getLocation().distanceSquaredTo(coreLocation) * 1.1));
 								}
@@ -513,6 +520,7 @@ public class RobotPlayer{
 								}
 							}else{
 								target = null;
+								targetType = null;
 								targetID = -1;
 								moveType = 0;
 							}
@@ -524,7 +532,7 @@ public class RobotPlayer{
 							for(int i = 0; i < tryOrder.length && target != null; i++){
 								if(rc.canMove(RESOURCE_FUNCTIONS.intToDir(startDir + tryOrder[i]))){
 									int newdist = current.add(RESOURCE_FUNCTIONS.intToDir(startDir + tryOrder[i])).distanceSquaredTo(target);
-									if(minInd == -1 || newdist < minDistance){
+									if((minInd == -1 || newdist < minDistance) && (targetType == RobotType.ARCHON || newdist > 2)){
 										minInd = i;
 										minDistance = newdist;
 									}
