@@ -861,7 +861,7 @@ public class RobotPlayer{
 
 		public static double getGoodSwarmRadius(){
 			int numRobots = rc.getRobotCount();
-			double radius = Math.sqrt((Swarmer.SWARM_RATIO * numRobots) / (2 * Math.PI));
+			double radius = (Swarmer.SWARM_RATIO * numRobots) / (2 * Math.PI);
 			if(radius >= 5){
 				return radius;
 			}
